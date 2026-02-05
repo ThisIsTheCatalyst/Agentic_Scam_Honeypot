@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 import requests
-
+import os
 from session_store import get_session, save_session
 from agent.agent import agent_step
+from typing import List, Dict, Optional
+
+API_KEY = os.getenv("API_KEY", "dev_key")
 
 app = FastAPI()
 
@@ -28,8 +31,8 @@ class Message(BaseModel):
 class HoneypotRequest(BaseModel):
     sessionId: str
     message: Message
-    conversationHistory: list | None = []
-    metadata: dict | None = {}
+    conversationHistory: Optional[List[dict]] = None
+    metadata: Optional[Dict] = None
 
 
 # ----------------------------
@@ -41,7 +44,7 @@ def honeypot(
     x_api_key: str = Header(None, alias="x-api-key")
 ):
     # 1️⃣ API key check
-    if x_api_key != "dev_key":
+    if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     session_id = body.sessionId
