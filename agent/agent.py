@@ -96,7 +96,7 @@ def agent_step(session: dict, incoming_text: str) -> dict:
 
 
             agent_state["llm_calls"] += 1
-            LLM_WINDOW.append(time.time())
+            llm_window.append(time.time())
 
         except Exception:
             # Absolute safety: never crash
