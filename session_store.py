@@ -1,7 +1,11 @@
 import json
+import logging
+from redis.exceptions import RedisError
 from redis_client import redis_client
 
 SESSION_TTL_SECONDS = 3600  # 1 hour
+
+logger = logging.getLogger(__name__)
 
 
 # ----------------------------
@@ -9,14 +13,17 @@ SESSION_TTL_SECONDS = 3600  # 1 hour
 # ----------------------------
 def get_session(session_id: str) -> dict:
     key = f"session:{session_id}"
-    raw = redis_client.get(key)
+
+    try:
+        raw = redis_client.get(key)
+    except RedisError as e:
+        logger.error("Redis GET failed: %s", e)
+        raw = None  # fallback to new session
 
     if raw:
         return json.loads(raw)
 
-    # ----------------------------
     # FIRST MESSAGE → create session
-    # ----------------------------
     session = {
         "messages": [],
         "agent_state": {
@@ -37,11 +44,14 @@ def get_session(session_id: str) -> dict:
         "finalized": False
     }
 
-    redis_client.setex(
-        key,
-        SESSION_TTL_SECONDS,
-        json.dumps(session)
-    )
+    try:
+        redis_client.setex(
+            key,
+            SESSION_TTL_SECONDS,
+            json.dumps(session)
+        )
+    except RedisError as e:
+        logger.error("Redis SET failed: %s", e)
 
     return session
 
@@ -52,8 +62,11 @@ def get_session(session_id: str) -> dict:
 def save_session(session_id: str, session: dict) -> None:
     key = f"session:{session_id}"
 
-    redis_client.setex(
-        key,
-        SESSION_TTL_SECONDS,
-        json.dumps(session)
-    )
+    try:
+        redis_client.setex(
+            key,
+            SESSION_TTL_SECONDS,
+            json.dumps(session)
+        )
+    except RedisError as e:
+        logger.error("Redis SET failed: %s", e)

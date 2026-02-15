@@ -1,7 +1,9 @@
 """
-Honeypot API backend for Render.
-Uses Redis for session state. Set REDIS_HOST, REDIS_PORT (or REDIS_URL via redis_client).
+Honeypot API backend.
+Uses Redis for session state.
+Requires REDIS_URL environment variable.
 """
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -20,7 +22,15 @@ from agent.agent import rebuild_state_from_history
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ----------------------------
+# Required Environment Variables
+# ----------------------------
 API_KEY = os.getenv("API_KEY", "dev_key")
+REDIS_URL = os.getenv("REDIS_URL")
+
+if not REDIS_URL:
+    raise ValueError("REDIS_URL environment variable is required")
+
 CALLBACK_URL = "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
 
 app = FastAPI(title="Agentic Honeypot API", version="1.0")
@@ -41,7 +51,7 @@ class HoneypotRequest(BaseModel):
     conversationHistory: Optional[List[dict]] = None
 
 # ----------------------------
-# Health check (for Render health checks)
+# Health check
 # ----------------------------
 @app.get("/")
 def health():
@@ -49,7 +59,7 @@ def health():
 
 
 # ----------------------------
-# Honeypot API (6.1 First Message / 6.2 Follow-Up)
+# Honeypot API
 # ----------------------------
 @app.post("/api/honeypot")
 def honeypot(
@@ -86,7 +96,7 @@ def honeypot(
     # 4. Persist updated session
     save_session(session_id, session)
 
-    # 5. Mandatory final result callback (once per session, race-safe)
+    # 5. Mandatory final result callback (once per session)
     if agent_output["should_finalize"] and not session.get("finalized", False):
         session["finalized"] = True
         save_session(session_id, session)
@@ -120,8 +130,7 @@ def honeypot(
 
 
 # ----------------------------
-# Run with: uvicorn app:app --host 0.0.0.0 --port 8000
-# On Render, set PORT in env and use: uvicorn app:app --host 0.0.0.0 --port $PORT
+# Run locally
 # ----------------------------
 if __name__ == "__main__":
     import uvicorn
