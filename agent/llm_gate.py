@@ -35,13 +35,13 @@ def should_use_llm(strategy: str, agent_state: dict, session: dict) -> bool:
     # If scam likelihood is high,
     # increase realism moderately
     # -------------------------
-    if confidence >= 0.75 and llm_calls < 9:
+    if confidence >= 4 and llm_calls < 9:
         return True
 
     # -------------------------
     # Light refresh every 6 turns
     # -------------------------
-    if turns % 6 == 0 and llm_calls < 10:
+    if turns % 3 == 0 and llm_calls < 10:
         return True
 
     # -------------------------
