@@ -32,7 +32,7 @@ Latest message:
 
 Respond STRICTLY in JSON:
 {{
-  "language": "english or hinglish",
+  "language": "last language used",
   "reply": "text"
 }}
 """

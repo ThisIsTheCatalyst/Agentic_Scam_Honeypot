@@ -14,6 +14,8 @@ from typing import List, Dict, Optional
 
 from session_store import get_session, save_session
 from agent.agent import agent_step
+from agent.agent import rebuild_state_from_history
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,8 +39,6 @@ class HoneypotRequest(BaseModel):
     sessionId: str
     message: Message
     conversationHistory: Optional[List[dict]] = None
-    metadata: Optional[Dict] = None
-
 
 # ----------------------------
 # Health check (for Render health checks)
@@ -63,8 +63,22 @@ def honeypot(
     session_id = body.sessionId
     incoming_text = body.message.text
 
-    # 2. Load or create session (Redis)
     session = get_session(session_id)
+
+
+    # If Redis session is empty but history is provided,
+# rebuild state from conversationHistory
+    if not session.get("messages") and body.conversationHistory:
+        rebuild_state_from_history(session, body.conversationHistory)
+        session["messages"] = []
+        session["intelligence"] = {}
+        session["agent_state"] = {}
+
+    for msg in body.conversationHistory:
+        if msg["sender"] == "scammer":
+            # Simulate processing previous scammer message
+            agent_step(session, msg["text"])
+
 
     # 3. Run agent step
     agent_output = agent_step(session, incoming_text)
@@ -80,7 +94,7 @@ def honeypot(
         intelligence = session.get("intelligence", {})
         payload = {
             "sessionId": session_id,
-            "scamDetected": session.get("scam_detected", True),
+            "scamDetected": session.get("scam_detected", False),
             "totalMessagesExchanged": len(session.get("messages", [])),
             "extractedIntelligence": {
                 "bankAccounts": intelligence.get("bankAccounts", []),
