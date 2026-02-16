@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 import time
 
 LLM_WINDOW = []
-LLM_MAX_CALLS = 60   # per 60 seconds
+LLM_MAX_CALLS = 50   # per 60 seconds
 LLM_WINDOW_SECONDS = 60
 
 
