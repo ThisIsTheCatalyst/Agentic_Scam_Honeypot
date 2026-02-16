@@ -3,14 +3,12 @@ import logging
 from redis.exceptions import RedisError
 from redis_client import redis_client
 
-SESSION_TTL_SECONDS = 3600  # 1 hour
+SESSION_TTL_SECONDS = 3600  
 
 logger = logging.getLogger(__name__)
 
 
-# ----------------------------
-# Get or create session
-# ----------------------------
+
 def get_session(session_id: str) -> dict:
     key = f"session:{session_id}"
 
@@ -18,12 +16,12 @@ def get_session(session_id: str) -> dict:
         raw = redis_client.get(key)
     except RedisError as e:
         logger.error("Redis GET failed: %s", e)
-        raw = None  # fallback to new session
+        raw = None 
 
     if raw:
         return json.loads(raw)
 
-    # FIRST MESSAGE → create session
+    
     session = {
         "messages": [],
         "agent_state": {
@@ -56,9 +54,7 @@ def get_session(session_id: str) -> dict:
     return session
 
 
-# ----------------------------
-# Save updated session
-# ----------------------------
+
 def save_session(session_id: str, session: dict) -> None:
     key = f"session:{session_id}"
 
