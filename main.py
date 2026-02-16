@@ -1,9 +1,3 @@
-"""
-Honeypot API backend.
-Uses Redis for session state.
-Requires REDIS_URL environment variable.
-"""
-
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,9 +16,7 @@ from agent.agent import rebuild_state_from_history
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ----------------------------
-# Required Environment Variables
-# ----------------------------
+
 API_KEY = os.getenv("API_KEY", "dev_key")
 REDIS_URL = os.getenv("REDIS_URL")
 
@@ -36,9 +28,7 @@ CALLBACK_URL = "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
 app = FastAPI(title="Agentic Honeypot API", version="1.0")
 
 
-# ----------------------------
-# Request/Response models (per spec)
-# ----------------------------
+
 class Message(BaseModel):
     sender: str
     text: str
@@ -50,23 +40,19 @@ class HoneypotRequest(BaseModel):
     message: Message
     conversationHistory: Optional[List[dict]] = None
 
-# ----------------------------
-# Health check
-# ----------------------------
+
 @app.get("/")
 def health():
     return {"status": "backend running"}
 
 
-# ----------------------------
-# Honeypot API
-# ----------------------------
+
 @app.post("/api/honeypot")
 def honeypot(
     body: HoneypotRequest,
     x_api_key: Optional[str] = Header(None, alias="x-api-key"),
 ):
-    # 1. API Authentication
+    
     if not x_api_key or x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
@@ -76,8 +62,7 @@ def honeypot(
     session = get_session(session_id)
 
 
-    # If Redis session is empty but history is provided,
-# rebuild state from conversationHistory
+   
     if not session.get("messages") and body.conversationHistory:
         rebuild_state_from_history(session, body.conversationHistory)
         session["messages"] = []
@@ -86,17 +71,17 @@ def honeypot(
 
     for msg in body.conversationHistory:
         if msg["sender"] == "scammer":
-            # Simulate processing previous scammer message
+            
             agent_step(session, msg["text"])
 
 
-    # 3. Run agent step
+    
     agent_output = agent_step(session, incoming_text)
 
-    # 4. Persist updated session
+   
     save_session(session_id, session)
 
-    # 5. Mandatory final result callback (once per session)
+   
     if agent_output["should_finalize"] and not session.get("finalized", False):
         session["finalized"] = True
         save_session(session_id, session)
@@ -122,16 +107,14 @@ def honeypot(
         except Exception as e:
             logger.error("Callback failed: %s", e)
 
-    # 6. Agent output (per spec)
+   
     return {
         "status": "success",
         "reply": agent_output["reply"],
     }
 
 
-# ----------------------------
-# Run locally
-# ----------------------------
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
